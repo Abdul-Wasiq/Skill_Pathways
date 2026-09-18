@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CareerBridge</title>
+<script>
+  const hasToken = !!localStorage.getItem("cp_token");
+  window.location.href = hasToken ? "pages/home.html" : "pages/login.html";
+</script>
+</head>
+<body></body>
+</html>

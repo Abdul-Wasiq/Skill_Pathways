@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Dashboard — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+
+    <div class="card">
+      <h2 class="mt-0" id="welcomeMsg">Welcome back</h2>
+      <div id="completionSection"></div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between">
+        <h3 class="mt-0">Latest Opportunities</h3>
+        <a href="opportunities.html">View all &rarr;</a>
+      </div>
+      <div id="opportunitiesList" class="text-muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between">
+        <h3 class="mt-0">Your Applications</h3>
+      </div>
+      <div id="applicationsList" class="text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("home.html");
+
+    async function loadDashboard() {
+      const user = Auth.getUser();
+      document.getElementById("welcomeMsg").textContent = `Welcome back, ${user.name}`;
+
+      try {
+        if (user.role === "student" || user.role === "professional") {
+          const profile = await apiRequest("/api/profile");
+          document.getElementById("completionSection").innerHTML = `
+            <p class="text-muted" style="margin-bottom:2px;">Profile Completion: ${profile.profile_completion}%</p>
+            <div class="completion-bar"><div style="width:${profile.profile_completion}%"></div></div>
+            ${profile.profile_completion < 100 ? '<a href="profile.html">Complete your profile &rarr;</a>' : ''}
+          `;
+        } else {
+          document.getElementById("completionSection").innerHTML =
+            `<p class="text-muted">Organization account — manage your postings from the Opportunities page.</p>`;
+        }
+
+        const opportunities = await apiRequest("/api/opportunities?limit=5");
+        document.getElementById("opportunitiesList").innerHTML = opportunities.length
+          ? opportunities.map(opportunityCardHtml).join("")
+          : `<p class="text-muted">No opportunities posted yet.</p>`;
+
+        if (user.role === "student" || user.role === "professional") {
+          const applications = await apiRequest("/api/applications");
+          document.getElementById("applicationsList").innerHTML = applications.length
+            ? applications.map(a => `
+                <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                  <div>
+                    <strong>${a.opportunity_title}</strong>
+                    <div class="text-muted" style="font-size:0.85rem;">${a.organization_name}</div>
+                  </div>
+                  <span class="badge type-job">${a.status.replace('_',' ')}</span>
+                </div>
+              `).join("")
+            : `<p class="text-muted">You haven't applied to anything yet.</p>`;
+        } else {
+          document.getElementById("applicationsList").innerHTML =
+            `<p class="text-muted">Not applicable for organization accounts.</p>`;
+        }
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    function opportunityCardHtml(o) {
+      return `
+        <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+          <div class="flex-between">
+            <strong>${o.title}</strong>
+            <span class="badge type-${o.type}">${o.type}</span>
+          </div>
+          <div class="text-muted" style="font-size:0.85rem;">
+            ${o.organization_name} • ${o.location || 'Location not specified'}
+          </div>
+          <a href="opportunity-detail.html?id=${o.id}">View details &rarr;</a>
+        </div>
+      `;
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>

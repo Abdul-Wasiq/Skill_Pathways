@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Feed — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+
+    <div class="card">
+      <h3 class="mt-0">Share something</h3>
+      <textarea id="postContent" rows="3" placeholder="Share an update, achievement, question, or project..."></textarea>
+      <div class="grid cols-2">
+        <select id="postType">
+          <option value="text">Text</option>
+          <option value="achievement">Achievement</option>
+          <option value="project">Project</option>
+          <option value="question">Question</option>
+          <option value="learning">Learning</option>
+          <option value="announcement">Announcement</option>
+        </select>
+        <button class="secondary" id="aiHelpBtn" type="button" style="margin-top:0;">✨ AI: Improve Writing</button>
+      </div>
+      <button id="publishBtn">Publish</button>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Recommended For You</h3>
+      <div id="recommendedOpportunities" class="text-muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Your Feed</h3>
+      <div id="postsFeed" class="text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("feed.html");
+    const user = Auth.getUser();
+
+    document.getElementById("aiHelpBtn").addEventListener("click", async () => {
+      const content = document.getElementById("postContent").value.trim();
+      if (!content) { showError("errorBox", "Write a draft first."); return; }
+      const btn = document.getElementById("aiHelpBtn");
+      btn.disabled = true;
+      btn.textContent = "Improving...";
+      try {
+        const result = await apiRequest("/api/ai/post-assistant", {
+          method: "POST",
+          body: { content, action: "improve" },
+        });
+        document.getElementById("postContent").value = result.revised_content;
+        if (result.suggested_hashtags && result.suggested_hashtags.length) {
+          showSuccess("successBox", "Suggested hashtags: " + result.suggested_hashtags.join(" "));
+        }
+      } catch (err) {
+        showError("errorBox", err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "✨ AI: Improve Writing";
+      }
+    });
+
+    document.getElementById("publishBtn").addEventListener("click", async () => {
+      const content = document.getElementById("postContent").value.trim();
+      if (!content) { showError("errorBox", "Post content cannot be empty."); return; }
+      try {
+        await apiRequest("/api/posts", {
+          method: "POST",
+          body: { content, post_type: document.getElementById("postType").value },
+        });
+        document.getElementById("postContent").value = "";
+        showSuccess("successBox", "Post published!");
+        loadFeed();
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    });
+
+    function postCardHtml(p) {
+      return `
+        <div class="card" style="margin-bottom:10px;">
+          <div class="flex-between">
+            <strong>${p.author_name}</strong>
+            <span class="badge type-job">${p.post_type}</span>
+          </div>
+          <p>${p.content}</p>
+          <div class="flex text-muted" style="font-size:0.85rem; gap:16px;">
+            <a href="#" class="likeBtn" data-id="${p.id}">👍 ${p.like_count}</a>
+            <span>💬 ${p.comment_count}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadFeed() {
+      hideError("errorBox");
+      try {
+        const feed = await apiRequest("/api/feed?limit=20");
+
+        document.getElementById("recommendedOpportunities").innerHTML = feed.opportunities.length
+          ? feed.opportunities.map(o => `
+              <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+                <div class="flex-between">
+                  <a href="opportunity-detail.html?id=${o.id}"><strong>${o.title}</strong></a>
+                  <span class="badge type-${o.type}">${o.type}</span>
+                </div>
+                <div class="text-muted" style="font-size:0.85rem;">${o.organization_name}</div>
+              </div>
+            `).join("")
+          : `<p class="text-muted">No recommendations yet — add skills to your profile to improve these.</p>`;
+
+        document.getElementById("postsFeed").innerHTML = feed.posts.length
+          ? feed.posts.map(postCardHtml).join("")
+          : `<p class="text-muted">No posts yet. Be the first to share something!</p>`;
+
+        document.querySelectorAll(".likeBtn").forEach(el => {
+          el.addEventListener("click", async (e) => {
+            e.preventDefault();
+            try {
+              await apiRequest(`/api/posts/${e.target.dataset.id}/like`, { method: "POST" });
+              loadFeed();
+            } catch (err) {
+              showError("errorBox", err.message);
+            }
+          });
+        });
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    loadFeed();
+  </script>
+</body>
+</html>

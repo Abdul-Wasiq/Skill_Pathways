@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Admin — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+
+    <div class="card">
+      <h3 class="mt-0">Platform Statistics</h3>
+      <div id="statsGrid" class="grid cols-2 text-muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Users</h3>
+      <div id="usersList" class="text-muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Organizations</h3>
+      <div id="orgsList" class="text-muted">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Reports</h3>
+      <div id="reportsList" class="text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("admin.html");
+    const user = Auth.getUser();
+    if (user.role !== "admin") {
+      document.querySelector(".container").innerHTML = `<div class="card"><p>Admins only.</p></div>`;
+      throw new Error("Not an admin");
+    }
+
+    async function loadAdmin() {
+      hideError("errorBox");
+      try {
+        const stats = await apiRequest("/api/admin/stats");
+        document.getElementById("statsGrid").innerHTML = Object.entries(stats).map(([key, val]) => `
+          <div class="card" style="margin-bottom:0;">
+            <div style="font-size:1.6rem; font-weight:700; color:var(--text);">${val}</div>
+            <div class="text-muted" style="font-size:0.8rem;">${key.replace(/_/g, ' ')}</div>
+          </div>
+        `).join("");
+
+        const users = await apiRequest("/api/admin/users");
+        document.getElementById("usersList").innerHTML = users.map(u => `
+          <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div>
+              <strong>${u.name}</strong> <span class="text-muted">(${u.role})</span>
+              <div class="text-muted" style="font-size:0.8rem;">${u.email}</div>
+            </div>
+            <div>
+              <span class="badge type-${u.is_active ? 'internship' : 'job'}">${u.is_active ? 'active' : 'suspended'}</span>
+              ${u.is_active
+                ? `<button class="secondary danger suspendBtn" data-id="${u.id}" style="margin-top:0;">Suspend</button>`
+                : `<button class="secondary reactivateBtn" data-id="${u.id}" style="margin-top:0;">Reactivate</button>`}
+            </div>
+          </div>
+        `).join("");
+
+        document.querySelectorAll(".suspendBtn").forEach(el =>
+          el.addEventListener("click", async () => {
+            await apiRequest(`/api/admin/users/${el.dataset.id}/suspend`, { method: "PUT" });
+            loadAdmin();
+          })
+        );
+        document.querySelectorAll(".reactivateBtn").forEach(el =>
+          el.addEventListener("click", async () => {
+            await apiRequest(`/api/admin/users/${el.dataset.id}/reactivate`, { method: "PUT" });
+            loadAdmin();
+          })
+        );
+
+        const orgs = await apiRequest("/api/admin/organizations");
+        document.getElementById("orgsList").innerHTML = orgs.length ? orgs.map(o => `
+          <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div><strong>${o.name}</strong> <span class="text-muted">${o.industry || ''}</span></div>
+            ${o.is_verified
+              ? '<span class="badge type-internship">verified</span>'
+              : `<button class="verifyBtn" data-id="${o.id}" style="margin-top:0;">Verify</button>`}
+          </div>
+        `).join("") : `<p class="text-muted">No organizations yet.</p>`;
+
+        document.querySelectorAll(".verifyBtn").forEach(el =>
+          el.addEventListener("click", async () => {
+            await apiRequest(`/api/admin/organizations/${el.dataset.id}/verify`, { method: "PUT" });
+            loadAdmin();
+          })
+        );
+
+        const reports = await apiRequest("/api/admin/reports");
+        document.getElementById("reportsList").innerHTML = reports.length ? reports.map(r => `
+          <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div class="flex-between">
+              <strong>${r.target_type} report by ${r.reporter_name}</strong>
+              <span class="badge type-job">${r.status}</span>
+            </div>
+            <p class="text-muted" style="font-size:0.85rem;">${r.reason}</p>
+          </div>
+        `).join("") : `<p class="text-muted">No reports.</p>`;
+
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    loadAdmin();
+  </script>
+</body>
+</html>

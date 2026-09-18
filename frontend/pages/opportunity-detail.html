@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Opportunity Details — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+    <div id="content">Loading...</div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("opportunities.html");
+    const user = Auth.getUser();
+    const opportunityId = new URLSearchParams(window.location.search).get("id");
+
+    async function loadOpportunity() {
+      try {
+        const o = await apiRequest(`/api/opportunities/${opportunityId}`);
+        const skillsHtml = (o.skills || []).map(s =>
+          `<span class="tag ${s.importance === 'required' ? '' : 'text-muted'}">${s.name}${s.importance === 'preferred' ? ' (preferred)' : ''}</span>`
+        ).join("");
+
+        document.getElementById("content").innerHTML = `
+          <div class="card">
+            <div class="flex-between">
+              <h2 class="mt-0">${o.title}</h2>
+              <span class="badge type-${o.type}">${o.type}</span>
+            </div>
+            <p class="text-muted">${o.organization_name} • ${o.location || 'Location not specified'}</p>
+            <p>${o.description}</p>
+            <div style="margin: 12px 0;">${skillsHtml || '<span class="text-muted">No specific skills listed.</span>'}</div>
+            ${o.deadline ? `<p class="text-muted">Deadline: ${new Date(o.deadline).toLocaleDateString()}</p>` : ''}
+            ${o.min_cgpa ? `<p class="text-muted">Minimum CGPA: ${o.min_cgpa}</p>` : ''}
+            ${o.eligibility_notes ? `<p class="text-muted"><strong>Eligibility notes:</strong> ${o.eligibility_notes}</p>` : ''}
+
+            ${(user.role === 'student' || user.role === 'professional') ? `
+              <button id="applyBtn">Apply</button>
+              <button class="secondary" id="saveBtn">Save</button>
+            ` : ''}
+          </div>
+
+          ${(user.role === 'student' || user.role === 'professional') ? `
+            <div class="card" id="aiSection">
+              <h3 class="mt-0">AI Compatibility Analysis</h3>
+              <div id="aiResult" class="text-muted">
+                <button id="analyzeBtn">Run AI Match Analysis</button>
+              </div>
+            </div>
+          ` : ''}
+        `;
+
+        const applyBtn = document.getElementById("applyBtn");
+        if (applyBtn) applyBtn.addEventListener("click", applyToOpportunity);
+        const saveBtn = document.getElementById("saveBtn");
+        if (saveBtn) saveBtn.addEventListener("click", saveOpportunity);
+        const analyzeBtn = document.getElementById("analyzeBtn");
+        if (analyzeBtn) analyzeBtn.addEventListener("click", runAiMatch);
+
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    async function applyToOpportunity() {
+      try {
+        await apiRequest(`/api/opportunities/${opportunityId}/apply`, { method: "POST" });
+        showSuccess("successBox", "Application submitted!");
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    async function saveOpportunity() {
+      try {
+        await apiRequest(`/api/opportunities/${opportunityId}/save`, { method: "POST" });
+        showSuccess("successBox", "Opportunity saved.");
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    async function runAiMatch() {
+      const resultEl = document.getElementById("aiResult");
+      resultEl.innerHTML = `<p class="text-muted">Analyzing your profile against this opportunity...</p>`;
+      try {
+        const analysis = await apiRequest(`/api/ai/opportunity-match/${opportunityId}`, { method: "POST" });
+        const matched = (analysis.matched_skills || []).map(s => `<span class="tag matched">✓ ${s}</span>`).join("");
+        const missing = (analysis.missing_skills || []).map(s => `<span class="tag missing">⚠ ${s}</span>`).join("");
+        resultEl.innerHTML = `
+          <div class="match-score">${analysis.match_score}%</div>
+          <p class="text-muted" style="margin-top:-8px;">Overall Compatibility</p>
+          <div class="grid cols-2" style="margin: 12px 0;">
+            <div>Skills: <strong>${analysis.skills_score}%</strong></div>
+            <div>Education: <strong>${analysis.education_score}%</strong></div>
+            <div>Experience: <strong>${analysis.experience_score}%</strong></div>
+            <div>Eligibility: <strong>${analysis.eligibility_score}%</strong></div>
+          </div>
+          <div>${matched}${missing}</div>
+          <p style="margin-top:14px;"><strong>Why:</strong> ${analysis.explanation}</p>
+          ${analysis.eligibility_notes ? `<p class="text-muted"><strong>Eligibility:</strong> ${analysis.eligibility_notes}</p>` : ''}
+        `;
+      } catch (err) {
+        resultEl.innerHTML = `<p class="text-muted">Could not complete analysis.</p>`;
+        showError("errorBox", err.message);
+      }
+    }
+
+    loadOpportunity();
+  </script>
+</body>
+</html>

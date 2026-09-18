@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>AI Assistant — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+
+    <div class="card">
+      <h3 class="mt-0">💬 Career Assistant</h3>
+      <p class="text-muted">Ask anything about your profile, skills, or career path — the assistant uses your actual profile data.</p>
+      <textarea id="careerQuestion" rows="2" placeholder="e.g. What skills am I missing for backend roles?"></textarea>
+      <button id="askBtn">Ask</button>
+      <div id="careerAnswer" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">📋 Job Description Analyzer</h3>
+      <p class="text-muted">Paste a job description to see required skills, and your match if you're logged in.</p>
+      <textarea id="jobDescription" rows="5" placeholder="Paste the full job description here..."></textarea>
+      <button id="analyzeJobBtn">Analyze</button>
+      <div id="jobAnalysisResult" style="margin-top:14px;"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">📄 Resume → Profile</h3>
+      <p class="text-muted">Upload a PDF or DOCX resume. You'll review everything before it's saved — nothing is added automatically.</p>
+      <input type="file" id="resumeFile" accept=".pdf,.docx" />
+      <button id="uploadResumeBtn">Extract Info</button>
+      <div id="resumePreview" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("ai-assistant.html");
+
+    document.getElementById("askBtn").addEventListener("click", async () => {
+      const question = document.getElementById("careerQuestion").value.trim();
+      if (!question) return;
+      const el = document.getElementById("careerAnswer");
+      el.innerHTML = `<p class="text-muted">Thinking...</p>`;
+      try {
+        const result = await apiRequest("/api/ai/career-assistant", { method: "POST", body: { question } });
+        el.innerHTML = `
+          <p>${result.answer}</p>
+          ${result.suggested_next_steps.length ? `
+            <p class="text-muted" style="margin-bottom:4px;">Suggested next steps:</p>
+            <ul>${result.suggested_next_steps.map(s => `<li>${s}</li>`).join("")}</ul>
+          ` : ''}
+        `;
+      } catch (err) {
+        el.innerHTML = "";
+        showError("errorBox", err.message);
+      }
+    });
+
+    document.getElementById("analyzeJobBtn").addEventListener("click", async () => {
+      const description = document.getElementById("jobDescription").value.trim();
+      if (!description) return;
+      const el = document.getElementById("jobAnalysisResult");
+      el.innerHTML = `<p class="text-muted">Analyzing...</p>`;
+      try {
+        const result = await apiRequest("/api/ai/job-analyzer", { method: "POST", body: { description } });
+        const a = result.analysis;
+        let html = `
+          <div><strong>Required skills:</strong> ${a.required_skills.map(s => `<span class="tag">${s}</span>`).join("") || '<span class="text-muted">None detected</span>'}</div>
+          <div style="margin-top:8px;"><strong>Preferred skills:</strong> ${a.preferred_skills.map(s => `<span class="tag">${s}</span>`).join("") || '<span class="text-muted">None detected</span>'}</div>
+          <p class="text-muted" style="margin-top:8px;">Education: ${a.education_requirement || 'Not specified'} • Experience: ${a.experience_requirement || 'Not specified'} • Difficulty: ${a.estimated_difficulty || 'unclear'}</p>
+          ${a.key_notes ? `<p class="text-muted"><strong>Notes:</strong> ${a.key_notes}</p>` : ''}
+        `;
+        if (result.match) {
+          html += `
+            <div class="match-score" style="margin-top:14px;">${result.match.match_score}%</div>
+            <p class="text-muted" style="margin-top:-8px;">Your match against this job</p>
+          `;
+        }
+        el.innerHTML = html;
+      } catch (err) {
+        el.innerHTML = "";
+        showError("errorBox", err.message);
+      }
+    });
+
+    document.getElementById("uploadResumeBtn").addEventListener("click", async () => {
+      const fileInput = document.getElementById("resumeFile");
+      if (!fileInput.files.length) { showError("errorBox", "Choose a file first."); return; }
+      const el = document.getElementById("resumePreview");
+      el.innerHTML = `<p class="text-muted">Extracting and analyzing your resume...</p>`;
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/ai/resume-to-profile`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${Auth.getToken()}` },
+          body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Resume analysis failed.");
+
+        window._resumeData = data;
+        el.innerHTML = `
+          <p class="text-muted">Review the extracted info below, then confirm to save it to your profile.</p>
+          <label>Headline</label><input type="text" id="rHeadline" value="${data.headline || ''}" />
+          <label>Bio</label><textarea id="rBio" rows="2">${data.bio || ''}</textarea>
+          <label>Skills (comma separated)</label><input type="text" id="rSkills" value="${(data.skills || []).join(', ')}" />
+          <p class="text-muted" style="margin-top:10px;">Education found: ${data.education.length} • Experience found: ${data.experience.length} • Projects found: ${data.projects.length}</p>
+          <button id="confirmResumeBtn">Confirm &amp; Save to Profile</button>
+        `;
+
+        document.getElementById("confirmResumeBtn").addEventListener("click", async () => {
+          try {
+            await apiRequest("/api/ai/resume-to-profile/confirm", {
+              method: "POST",
+              body: {
+                headline: document.getElementById("rHeadline").value,
+                bio: document.getElementById("rBio").value,
+                skills: document.getElementById("rSkills").value.split(",").map(s => s.trim()).filter(Boolean),
+                education: data.education,
+                experience: data.experience,
+                projects: data.projects,
+                certifications: data.certifications,
+              },
+            });
+            showSuccess("successBox", "Profile updated from resume!");
+            el.innerHTML = "";
+          } catch (err) {
+            showError("errorBox", err.message);
+          }
+        });
+      } catch (err) {
+        el.innerHTML = "";
+        showError("errorBox", err.message);
+      }
+    });
+  </script>
+</body>
+</html>

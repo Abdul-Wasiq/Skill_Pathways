@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Notifications — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div class="card">
+      <div class="flex-between">
+        <h3 class="mt-0">Notifications</h3>
+        <button class="secondary" id="markAllBtn" style="margin-top:0;">Mark all as read</button>
+      </div>
+      <div id="notificationsList" class="text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("notifications.html");
+
+    document.getElementById("markAllBtn").addEventListener("click", async () => {
+      await apiRequest("/api/notifications/read-all", { method: "PUT" });
+      loadNotifications();
+    });
+
+    async function loadNotifications() {
+      hideError("errorBox");
+      try {
+        const notifications = await apiRequest("/api/notifications");
+        document.getElementById("notificationsList").innerHTML = notifications.length
+          ? notifications.map(n => `
+              <div style="padding:10px 0; border-bottom:1px solid var(--border); ${n.is_read ? 'opacity:0.6;' : ''}">
+                <div class="flex-between">
+                  <strong>${n.title}</strong>
+                  ${!n.is_read ? '<span class="tag">new</span>' : ''}
+                </div>
+                ${n.body ? `<p class="text-muted" style="margin:4px 0;">${n.body}</p>` : ''}
+                <span class="text-muted" style="font-size:0.8rem;">${new Date(n.created_at).toLocaleString()}</span>
+              </div>
+            `).join("")
+          : `<p class="text-muted">No notifications yet.</p>`;
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    loadNotifications();
+  </script>
+</body>
+</html>

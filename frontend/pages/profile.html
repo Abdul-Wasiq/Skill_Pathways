@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Profile — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+
+    <div class="card">
+      <div class="flex-between">
+        <h2 class="mt-0">Your Profile</h2>
+        <div id="completionBadge" class="text-muted"></div>
+      </div>
+      <div class="completion-bar"><div id="completionFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Basic Info</h3>
+      <form id="profileForm">
+        <div class="grid cols-2">
+          <div><label>Headline</label><input type="text" id="headline" placeholder="e.g. Aspiring Backend Developer" /></div>
+          <div><label>Location</label><input type="text" id="location" /></div>
+        </div>
+        <label>Bio</label><textarea id="bio" rows="3"></textarea>
+        <div class="grid cols-2">
+          <div><label>University</label><input type="text" id="university" /></div>
+          <div><label>Degree</label><input type="text" id="degree" placeholder="e.g. BS Computer Science" /></div>
+        </div>
+        <div class="grid cols-2">
+          <div><label>Graduation Year</label><input type="number" id="graduationYear" /></div>
+          <div><label>CGPA (0-4.0)</label><input type="number" step="0.01" min="0" max="4" id="cgpa" /></div>
+        </div>
+        <label>Career Goals</label><textarea id="careerGoals" rows="2"></textarea>
+        <div class="grid cols-2">
+          <div><label>GitHub URL</label><input type="text" id="githubUrl" /></div>
+          <div><label>Portfolio URL</label><input type="text" id="portfolioUrl" /></div>
+        </div>
+        <button type="submit">Save Profile</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Skills</h3>
+      <div id="skillsList"></div>
+      <form id="skillForm" class="flex" style="margin-top:10px;">
+        <input type="text" id="newSkill" placeholder="e.g. Python" style="flex:1;" />
+        <button type="submit" style="margin-top:0;">Add</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Experience</h3>
+      <div id="experienceList"></div>
+      <form id="experienceForm">
+        <div class="grid cols-2">
+          <div><label>Company</label><input type="text" id="expCompany" required /></div>
+          <div><label>Title</label><input type="text" id="expTitle" required /></div>
+        </div>
+        <div class="grid cols-2">
+          <div><label>Start Date</label><input type="date" id="expStart" /></div>
+          <div><label>End Date (blank if current)</label><input type="date" id="expEnd" /></div>
+        </div>
+        <label>Description</label><textarea id="expDescription" rows="2"></textarea>
+        <button type="submit">Add Experience</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 class="mt-0">Projects</h3>
+      <div id="projectsList"></div>
+      <form id="projectForm">
+        <label>Title</label><input type="text" id="projTitle" required />
+        <label>Description</label><textarea id="projDescription" rows="2"></textarea>
+        <label>URL</label><input type="text" id="projUrl" />
+        <button type="submit">Add Project</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("profile.html");
+
+    async function loadProfile() {
+      hideError("errorBox");
+      try {
+        const profile = await apiRequest("/api/profile");
+        document.getElementById("completionBadge").textContent = `Profile Completion: ${profile.profile_completion}%`;
+        document.getElementById("completionFill").style.width = `${profile.profile_completion}%`;
+
+        document.getElementById("headline").value = profile.headline || "";
+        document.getElementById("location").value = profile.location || "";
+        document.getElementById("bio").value = profile.bio || "";
+        document.getElementById("university").value = profile.university || "";
+        document.getElementById("degree").value = profile.degree || "";
+        document.getElementById("graduationYear").value = profile.graduation_year || "";
+        document.getElementById("cgpa").value = profile.cgpa || "";
+        document.getElementById("careerGoals").value = profile.career_goals || "";
+        document.getElementById("githubUrl").value = profile.github_url || "";
+        document.getElementById("portfolioUrl").value = profile.portfolio_url || "";
+
+        document.getElementById("skillsList").innerHTML = profile.skills.length
+          ? profile.skills.map(s => `<span class="tag">${s.name} <a href="#" data-skill-id="${s.id}" class="removeSkill" style="color:var(--danger);">&times;</a></span>`).join("")
+          : `<p class="text-muted">No skills added yet.</p>`;
+        document.querySelectorAll(".removeSkill").forEach(el =>
+          el.addEventListener("click", async (e) => {
+            e.preventDefault();
+            await apiRequest(`/api/profile/skills/${e.target.dataset.skillId}`, { method: "DELETE" });
+            loadProfile();
+          })
+        );
+
+        document.getElementById("experienceList").innerHTML = profile.experience.length
+          ? profile.experience.map(x => `
+              <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+                <strong>${x.title}</strong> at ${x.company}
+                <div class="text-muted" style="font-size:0.85rem;">
+                  ${x.start_date || '?'} — ${x.end_date || 'Present'}
+                </div>
+              </div>`).join("")
+          : `<p class="text-muted">No experience added yet.</p>`;
+
+        document.getElementById("projectsList").innerHTML = profile.projects.length
+          ? profile.projects.map(p => `
+              <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+                <strong>${p.title}</strong>
+                ${p.url ? ` — <a href="${p.url}" target="_blank">link</a>` : ''}
+                <div class="text-muted" style="font-size:0.85rem;">${p.description || ''}</div>
+              </div>`).join("")
+          : `<p class="text-muted">No projects added yet.</p>`;
+
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    document.getElementById("profileForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest("/api/profile", {
+          method: "PUT",
+          body: {
+            headline: document.getElementById("headline").value || null,
+            location: document.getElementById("location").value || null,
+            bio: document.getElementById("bio").value || null,
+            university: document.getElementById("university").value || null,
+            degree: document.getElementById("degree").value || null,
+            graduation_year: document.getElementById("graduationYear").value ? parseInt(document.getElementById("graduationYear").value) : null,
+            cgpa: document.getElementById("cgpa").value ? parseFloat(document.getElementById("cgpa").value) : null,
+            career_goals: document.getElementById("careerGoals").value || null,
+            github_url: document.getElementById("githubUrl").value || null,
+            portfolio_url: document.getElementById("portfolioUrl").value || null,
+          },
+        });
+        showSuccess("successBox", "Profile updated.");
+        loadProfile();
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    });
+
+    document.getElementById("skillForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("newSkill");
+      if (!input.value.trim()) return;
+      try {
+        await apiRequest("/api/profile/skills", { method: "POST", body: { name: input.value.trim() } });
+        input.value = "";
+        loadProfile();
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    });
+
+    document.getElementById("experienceForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest("/api/profile/experience", {
+          method: "POST",
+          body: {
+            company: document.getElementById("expCompany").value,
+            title: document.getElementById("expTitle").value,
+            start_date: document.getElementById("expStart").value || null,
+            end_date: document.getElementById("expEnd").value || null,
+            is_current: !document.getElementById("expEnd").value,
+            description: document.getElementById("expDescription").value || null,
+          },
+        });
+        document.getElementById("experienceForm").reset();
+        showSuccess("successBox", "Experience added.");
+        loadProfile();
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    });
+
+    document.getElementById("projectForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await apiRequest("/api/profile/projects", {
+          method: "POST",
+          body: {
+            title: document.getElementById("projTitle").value,
+            description: document.getElementById("projDescription").value || null,
+            url: document.getElementById("projUrl").value || null,
+          },
+        });
+        document.getElementById("projectForm").reset();
+        showSuccess("successBox", "Project added.");
+        loadProfile();
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

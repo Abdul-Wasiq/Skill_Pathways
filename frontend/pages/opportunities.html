@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Opportunities — CareerBridge</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <div class="navbar" id="navbar"></div>
+  <div class="container">
+    <div id="errorBox" class="error-msg"></div>
+    <div id="successBox" class="success-msg"></div>
+
+    <div class="card">
+      <h3 class="mt-0">Filter Opportunities</h3>
+      <div class="grid cols-2">
+        <div>
+          <label for="filterType">Type</label>
+          <select id="filterType">
+            <option value="">All types</option>
+            <option value="job">Job</option>
+            <option value="internship">Internship</option>
+            <option value="scholarship">Scholarship</option>
+            <option value="fellowship">Fellowship</option>
+            <option value="competition">Competition</option>
+            <option value="event">Event</option>
+            <option value="training">Training</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterSearch">Search</label>
+          <input type="text" id="filterSearch" placeholder="Keyword..." />
+        </div>
+      </div>
+      <button onclick="loadOpportunities()">Apply Filters</button>
+    </div>
+
+    <div id="orgCreateSection"></div>
+
+    <div class="card">
+      <h3 class="mt-0">Opportunities</h3>
+      <div id="opportunitiesList" class="text-muted">Loading...</div>
+    </div>
+  </div>
+
+  <script src="../js/api.js"></script>
+  <script>
+    Auth.requireLogin();
+    renderNavbar("opportunities.html");
+    const user = Auth.getUser();
+
+    if (user.role === "organization") {
+      document.getElementById("orgCreateSection").innerHTML = `
+        <div class="card">
+          <h3 class="mt-0">Post a New Opportunity</h3>
+          <p class="text-muted" style="font-size:0.85rem;">
+            Note: you need an organization profile first. If this is your first post,
+            <a href="#" id="createOrgLink">create your organization profile</a>.
+          </p>
+          <form id="opportunityForm" style="display:none;">
+            <input type="hidden" id="orgId" />
+            <label>Title</label><input type="text" id="oppTitle" required />
+            <label>Description</label><textarea id="oppDescription" rows="3" required></textarea>
+            <div class="grid cols-2">
+              <div>
+                <label>Type</label>
+                <select id="oppType">
+                  <option value="job">Job</option>
+                  <option value="internship">Internship</option>
+                  <option value="scholarship">Scholarship</option>
+                  <option value="fellowship">Fellowship</option>
+                  <option value="competition">Competition</option>
+                  <option value="event">Event</option>
+                  <option value="training">Training</option>
+                </select>
+              </div>
+              <div>
+                <label>Work Mode</label>
+                <select id="oppWorkMode">
+                  <option value="">N/A</option>
+                  <option value="remote">Remote</option>
+                  <option value="hybrid">Hybrid</option>
+                  <option value="on_site">On-site</option>
+                </select>
+              </div>
+            </div>
+            <label>Location</label><input type="text" id="oppLocation" />
+            <label>Required skills (comma separated)</label><input type="text" id="oppRequiredSkills" placeholder="Python, PostgreSQL" />
+            <label>Preferred skills (comma separated)</label><input type="text" id="oppPreferredSkills" placeholder="Docker, AWS" />
+            <button type="submit">Post Opportunity</button>
+          </form>
+        </div>
+      `;
+      setupOrgCreation();
+    }
+
+    async function setupOrgCreation() {
+      let orgId = localStorage.getItem("cp_org_id");
+      if (orgId) showOpportunityForm(orgId);
+
+      document.getElementById("createOrgLink").addEventListener("click", async (e) => {
+        e.preventDefault();
+        const name = prompt("Organization name:");
+        if (!name) return;
+        try {
+          const org = await apiRequest("/api/organizations", { method: "POST", body: { name } });
+          localStorage.setItem("cp_org_id", org.id);
+          showOpportunityForm(org.id);
+          showSuccess("successBox", "Organization profile created.");
+        } catch (err) {
+          showError("errorBox", err.message);
+        }
+      });
+    }
+
+    function showOpportunityForm(orgId) {
+      document.getElementById("orgId").value = orgId;
+      document.getElementById("opportunityForm").style.display = "block";
+      document.getElementById("opportunityForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          await apiRequest(`/api/organizations/${orgId}/opportunities`, {
+            method: "POST",
+            body: {
+              title: document.getElementById("oppTitle").value,
+              description: document.getElementById("oppDescription").value,
+              type: document.getElementById("oppType").value,
+              work_mode: document.getElementById("oppWorkMode").value || null,
+              location: document.getElementById("oppLocation").value || null,
+              required_skills: document.getElementById("oppRequiredSkills").value.split(",").map(s => s.trim()).filter(Boolean),
+              preferred_skills: document.getElementById("oppPreferredSkills").value.split(",").map(s => s.trim()).filter(Boolean),
+            },
+          });
+          showSuccess("successBox", "Opportunity posted!");
+          document.getElementById("opportunityForm").reset();
+          loadOpportunities();
+        } catch (err) {
+          showError("errorBox", err.message);
+        }
+      });
+    }
+
+    async function loadOpportunities() {
+      hideError("errorBox");
+      const type = document.getElementById("filterType").value;
+      const search = document.getElementById("filterSearch").value.trim();
+      const params = new URLSearchParams();
+      if (type) params.set("type", type);
+      if (search) params.set("search", search);
+
+      try {
+        const opportunities = await apiRequest(`/api/opportunities?${params.toString()}`);
+        document.getElementById("opportunitiesList").innerHTML = opportunities.length
+          ? opportunities.map(o => `
+              <div style="padding:12px 0; border-bottom:1px solid var(--border);">
+                <div class="flex-between">
+                  <strong>${o.title}</strong>
+                  <span class="badge type-${o.type}">${o.type}</span>
+                </div>
+                <div class="text-muted" style="font-size:0.85rem;">
+                  ${o.organization_name} • ${o.location || 'Location not specified'}
+                  ${o.deadline ? ' • Deadline: ' + new Date(o.deadline).toLocaleDateString() : ''}
+                </div>
+                <a href="opportunity-detail.html?id=${o.id}">View details &amp; AI match &rarr;</a>
+              </div>
+            `).join("")
+          : `<p class="text-muted">No opportunities match your filters.</p>`;
+      } catch (err) {
+        showError("errorBox", err.message);
+      }
+    }
+
+    loadOpportunities();
+  </script>
+</body>
+</html>
