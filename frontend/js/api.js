@@ -9,7 +9,7 @@
 const API_BASE_URL =
   location.hostname === "localhost" || location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:8000"
-    : "https://wrapped-yield-friendship-fifteen.trycloudflare.com"; // <-- update this line when the tunnel URL changes
+    : "https://roommate-imports-schedule-ranger.trycloudflare.com"; // <-- update this line when the tunnel URL changes
 
 /**
  * Escape user-generated text before putting it into innerHTML.
