@@ -3,6 +3,7 @@ Data access for admin operations: user management, moderation,
 organization verification, and platform statistics.
 """
 from app.database import get_cursor
+from app.repositories import user_repository
 
 
 def list_users(role: str | None = None, limit: int = 100, offset: int = 0) -> list[dict]:
@@ -24,7 +25,11 @@ def set_user_active(user_id: str, is_active: bool) -> dict | None:
             "UPDATE users SET is_active = %s WHERE id = %s RETURNING id, name, email, role, is_active",
             (is_active, user_id),
         )
-        return cur.fetchone()
+        row = cur.fetchone()
+    # Take effect immediately: forget the cached copy so the next request
+    # sees the new is_active value instead of waiting for the cache to expire.
+    user_repository.invalidate_user_cache(user_id)
+    return row
 
 
 def list_reports(status: str | None = None, limit: int = 100) -> list[dict]:
