@@ -65,10 +65,10 @@
             ? applications.map(a => `
                 <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
                   <div>
-                    <strong>${a.opportunity_title}</strong>
-                    <div class="text-muted" style="font-size:0.85rem;">${a.organization_name}</div>
+                    <strong>${esc(a.opportunity_title)}</strong>
+                    <div class="text-muted" style="font-size:0.85rem;">${esc(a.organization_name)}</div>
                   </div>
-                  <span class="badge type-job">${a.status.replace('_',' ')}</span>
+                  <span class="badge type-job">${esc(a.status.replace('_',' '))}</span>
                 </div>
               `).join("")
             : `<p class="text-muted">You haven't applied to anything yet.</p>`;
@@ -85,13 +85,13 @@
       return `
         <div style="padding:10px 0; border-bottom:1px solid var(--border);">
           <div class="flex-between">
-            <strong>${o.title}</strong>
-            <span class="badge type-${o.type}">${o.type}</span>
+            <strong>${esc(o.title)}</strong>
+            <span class="badge type-${esc(o.type)}">${esc(o.type)}</span>
           </div>
           <div class="text-muted" style="font-size:0.85rem;">
-            ${o.organization_name} • ${o.location || 'Location not specified'}
+            ${esc(o.organization_name)} • ${esc(o.location || 'Location not specified')}
           </div>
-          <a href="opportunity-detail.html?id=${o.id}">View details &rarr;</a>
+          <a href="opportunity-detail.html?id=${encodeURIComponent(o.id)}">View details &rarr;</a>
         </div>
       `;
     }

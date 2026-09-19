@@ -89,13 +89,13 @@
       return `
         <div class="card" style="margin-bottom:10px;">
           <div class="flex-between">
-            <strong>${p.author_name}</strong>
-            <span class="badge type-job">${p.post_type}</span>
+            <strong>${esc(p.author_name)}</strong>
+            <span class="badge type-job">${esc(p.post_type)}</span>
           </div>
-          <p>${p.content}</p>
+          <p>${esc(p.content)}</p>
           <div class="flex text-muted" style="font-size:0.85rem; gap:16px;">
-            <a href="#" class="likeBtn" data-id="${p.id}">👍 ${p.like_count}</a>
-            <span>💬 ${p.comment_count}</span>
+            <a href="#" class="likeBtn" data-id="${esc(p.id)}">👍 ${esc(p.like_count)}</a>
+            <span>💬 ${esc(p.comment_count)}</span>
           </div>
         </div>
       `;
@@ -110,10 +110,10 @@
           ? feed.opportunities.map(o => `
               <div style="padding:8px 0; border-bottom:1px solid var(--border);">
                 <div class="flex-between">
-                  <a href="opportunity-detail.html?id=${o.id}"><strong>${o.title}</strong></a>
-                  <span class="badge type-${o.type}">${o.type}</span>
+                  <a href="opportunity-detail.html?id=${encodeURIComponent(o.id)}"><strong>${esc(o.title)}</strong></a>
+                  <span class="badge type-${esc(o.type)}">${esc(o.type)}</span>
                 </div>
-                <div class="text-muted" style="font-size:0.85rem;">${o.organization_name}</div>
+                <div class="text-muted" style="font-size:0.85rem;">${esc(o.organization_name)}</div>
               </div>
             `).join("")
           : `<p class="text-muted">No recommendations yet — add skills to your profile to improve these.</p>`;
@@ -126,7 +126,7 @@
           el.addEventListener("click", async (e) => {
             e.preventDefault();
             try {
-              await apiRequest(`/api/posts/${e.target.dataset.id}/like`, { method: "POST" });
+              await apiRequest(`/api/posts/${e.currentTarget.dataset.id}/like`, { method: "POST" });
               loadFeed();
             } catch (err) {
               showError("errorBox", err.message);

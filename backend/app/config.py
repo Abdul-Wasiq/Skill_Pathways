@@ -27,6 +27,10 @@ class Settings:
     DATABASE_NAME: str = _require("DATABASE_NAME", "career_platform")
     DATABASE_USER: str = _require("DATABASE_USER")
     DATABASE_PASSWORD: str = _require("DATABASE_PASSWORD")
+    # Neon (and most hosted Postgres) requires SSL. Use "require" in production,
+    # "prefer" is fine for a local pgAdmin/Postgres install.
+    DATABASE_SSLMODE: str = os.getenv("DATABASE_SSLMODE", "prefer")
+    DATABASE_POOL_MAX: int = int(os.getenv("DATABASE_POOL_MAX", "5"))
 
     # Auth
     JWT_SECRET: str = _require("JWT_SECRET")

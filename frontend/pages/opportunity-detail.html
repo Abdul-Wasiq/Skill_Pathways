@@ -25,21 +25,21 @@
       try {
         const o = await apiRequest(`/api/opportunities/${opportunityId}`);
         const skillsHtml = (o.skills || []).map(s =>
-          `<span class="tag ${s.importance === 'required' ? '' : 'text-muted'}">${s.name}${s.importance === 'preferred' ? ' (preferred)' : ''}</span>`
+          `<span class="tag ${s.importance === 'required' ? '' : 'text-muted'}">${esc(s.name)}${s.importance === 'preferred' ? ' (preferred)' : ''}</span>`
         ).join("");
 
         document.getElementById("content").innerHTML = `
           <div class="card">
             <div class="flex-between">
-              <h2 class="mt-0">${o.title}</h2>
-              <span class="badge type-${o.type}">${o.type}</span>
+              <h2 class="mt-0">${esc(o.title)}</h2>
+              <span class="badge type-${esc(o.type)}">${esc(o.type)}</span>
             </div>
-            <p class="text-muted">${o.organization_name} • ${o.location || 'Location not specified'}</p>
-            <p>${o.description}</p>
+            <p class="text-muted">${esc(o.organization_name)} • ${esc(o.location || 'Location not specified')}</p>
+            <p>${esc(o.description)}</p>
             <div style="margin: 12px 0;">${skillsHtml || '<span class="text-muted">No specific skills listed.</span>'}</div>
             ${o.deadline ? `<p class="text-muted">Deadline: ${new Date(o.deadline).toLocaleDateString()}</p>` : ''}
-            ${o.min_cgpa ? `<p class="text-muted">Minimum CGPA: ${o.min_cgpa}</p>` : ''}
-            ${o.eligibility_notes ? `<p class="text-muted"><strong>Eligibility notes:</strong> ${o.eligibility_notes}</p>` : ''}
+            ${o.min_cgpa ? `<p class="text-muted">Minimum CGPA: ${esc(o.min_cgpa)}</p>` : ''}
+            ${o.eligibility_notes ? `<p class="text-muted"><strong>Eligibility notes:</strong> ${esc(o.eligibility_notes)}</p>` : ''}
 
             ${(user.role === 'student' || user.role === 'professional') ? `
               <button id="applyBtn">Apply</button>
@@ -92,8 +92,8 @@
       resultEl.innerHTML = `<p class="text-muted">Analyzing your profile against this opportunity...</p>`;
       try {
         const analysis = await apiRequest(`/api/ai/opportunity-match/${opportunityId}`, { method: "POST" });
-        const matched = (analysis.matched_skills || []).map(s => `<span class="tag matched">✓ ${s}</span>`).join("");
-        const missing = (analysis.missing_skills || []).map(s => `<span class="tag missing">⚠ ${s}</span>`).join("");
+        const matched = (analysis.matched_skills || []).map(s => `<span class="tag matched">✓ ${esc(s)}</span>`).join("");
+        const missing = (analysis.missing_skills || []).map(s => `<span class="tag missing">⚠ ${esc(s)}</span>`).join("");
         resultEl.innerHTML = `
           <div class="match-score">${analysis.match_score}%</div>
           <p class="text-muted" style="margin-top:-8px;">Overall Compatibility</p>
@@ -104,8 +104,8 @@
             <div>Eligibility: <strong>${analysis.eligibility_score}%</strong></div>
           </div>
           <div>${matched}${missing}</div>
-          <p style="margin-top:14px;"><strong>Why:</strong> ${analysis.explanation}</p>
-          ${analysis.eligibility_notes ? `<p class="text-muted"><strong>Eligibility:</strong> ${analysis.eligibility_notes}</p>` : ''}
+          <p style="margin-top:14px;"><strong>Why:</strong> ${esc(analysis.explanation)}</p>
+          ${analysis.eligibility_notes ? `<p class="text-muted"><strong>Eligibility:</strong> ${esc(analysis.eligibility_notes)}</p>` : ''}
         `;
       } catch (err) {
         resultEl.innerHTML = `<p class="text-muted">Could not complete analysis.</p>`;

@@ -35,10 +35,10 @@
         document.getElementById("pendingList").innerHTML = pending.length
           ? pending.map(p => `
               <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <div><strong>${p.requester_name}</strong> <span class="text-muted">(${p.requester_role})</span></div>
+                <div><strong>${esc(p.requester_name)}</strong> <span class="text-muted">(${esc(p.requester_role)})</span></div>
                 <div>
-                  <button data-id="${p.id}" class="acceptBtn" style="margin-top:0;">Accept</button>
-                  <button data-id="${p.id}" class="secondary rejectBtn" style="margin-top:0;">Reject</button>
+                  <button data-id="${esc(p.id)}" class="acceptBtn" style="margin-top:0;">Accept</button>
+                  <button data-id="${esc(p.id)}" class="secondary rejectBtn" style="margin-top:0;">Reject</button>
                 </div>
               </div>
             `).join("")
@@ -48,8 +48,8 @@
         document.getElementById("connectionsList").innerHTML = connections.length
           ? connections.map(c => `
               <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <div><strong>${c.other_user_name}</strong> <span class="text-muted">(${c.other_user_role})</span></div>
-                <button data-id="${c.id}" class="secondary danger removeBtn" style="margin-top:0;">Remove</button>
+                <div><strong>${esc(c.other_user_name)}</strong> <span class="text-muted">(${esc(c.other_user_role)})</span></div>
+                <button data-id="${esc(c.id)}" class="secondary danger removeBtn" style="margin-top:0;">Remove</button>
               </div>
             `).join("")
           : `<p class="text-muted">No connections yet. Search for people to connect with.</p>`;

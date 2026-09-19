@@ -49,8 +49,8 @@
         const stats = await apiRequest("/api/admin/stats");
         document.getElementById("statsGrid").innerHTML = Object.entries(stats).map(([key, val]) => `
           <div class="card" style="margin-bottom:0;">
-            <div style="font-size:1.6rem; font-weight:700; color:var(--text);">${val}</div>
-            <div class="text-muted" style="font-size:0.8rem;">${key.replace(/_/g, ' ')}</div>
+            <div style="font-size:1.6rem; font-weight:700; color:var(--text);">${esc(val)}</div>
+            <div class="text-muted" style="font-size:0.8rem;">${esc(key.replace(/_/g, ' '))}</div>
           </div>
         `).join("");
 
@@ -58,14 +58,14 @@
         document.getElementById("usersList").innerHTML = users.map(u => `
           <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div>
-              <strong>${u.name}</strong> <span class="text-muted">(${u.role})</span>
-              <div class="text-muted" style="font-size:0.8rem;">${u.email}</div>
+              <strong>${esc(u.name)}</strong> <span class="text-muted">(${esc(u.role)})</span>
+              <div class="text-muted" style="font-size:0.8rem;">${esc(u.email)}</div>
             </div>
             <div>
               <span class="badge type-${u.is_active ? 'internship' : 'job'}">${u.is_active ? 'active' : 'suspended'}</span>
               ${u.is_active
-                ? `<button class="secondary danger suspendBtn" data-id="${u.id}" style="margin-top:0;">Suspend</button>`
-                : `<button class="secondary reactivateBtn" data-id="${u.id}" style="margin-top:0;">Reactivate</button>`}
+                ? `<button class="secondary danger suspendBtn" data-id="${esc(u.id)}" style="margin-top:0;">Suspend</button>`
+                : `<button class="secondary reactivateBtn" data-id="${esc(u.id)}" style="margin-top:0;">Reactivate</button>`}
             </div>
           </div>
         `).join("");
@@ -86,10 +86,10 @@
         const orgs = await apiRequest("/api/admin/organizations");
         document.getElementById("orgsList").innerHTML = orgs.length ? orgs.map(o => `
           <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
-            <div><strong>${o.name}</strong> <span class="text-muted">${o.industry || ''}</span></div>
+            <div><strong>${esc(o.name)}</strong> <span class="text-muted">${esc(o.industry || '')}</span></div>
             ${o.is_verified
               ? '<span class="badge type-internship">verified</span>'
-              : `<button class="verifyBtn" data-id="${o.id}" style="margin-top:0;">Verify</button>`}
+              : `<button class="verifyBtn" data-id="${esc(o.id)}" style="margin-top:0;">Verify</button>`}
           </div>
         `).join("") : `<p class="text-muted">No organizations yet.</p>`;
 
@@ -104,10 +104,10 @@
         document.getElementById("reportsList").innerHTML = reports.length ? reports.map(r => `
           <div style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div class="flex-between">
-              <strong>${r.target_type} report by ${r.reporter_name}</strong>
-              <span class="badge type-job">${r.status}</span>
+              <strong>${esc(r.target_type)} report by ${esc(r.reporter_name)}</strong>
+              <span class="badge type-job">${esc(r.status)}</span>
             </div>
-            <p class="text-muted" style="font-size:0.85rem;">${r.reason}</p>
+            <p class="text-muted" style="font-size:0.85rem;">${esc(r.reason)}</p>
           </div>
         `).join("") : `<p class="text-muted">No reports.</p>`;
 

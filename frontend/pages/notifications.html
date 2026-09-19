@@ -37,10 +37,10 @@
           ? notifications.map(n => `
               <div style="padding:10px 0; border-bottom:1px solid var(--border); ${n.is_read ? 'opacity:0.6;' : ''}">
                 <div class="flex-between">
-                  <strong>${n.title}</strong>
+                  <strong>${esc(n.title)}</strong>
                   ${!n.is_read ? '<span class="tag">new</span>' : ''}
                 </div>
-                ${n.body ? `<p class="text-muted" style="margin:4px 0;">${n.body}</p>` : ''}
+                ${n.body ? `<p class="text-muted" style="margin:4px 0;">${esc(n.body)}</p>` : ''}
                 <span class="text-muted" style="font-size:0.8rem;">${new Date(n.created_at).toLocaleString()}</span>
               </div>
             `).join("")

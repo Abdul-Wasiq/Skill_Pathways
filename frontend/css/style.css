@@ -70,7 +70,7 @@ a:hover {
 }
 
 .navbar .brand::before {
-  content: "SP";
+  content: "CB";
   display: inline-flex;
   align-items: center;
   justify-content: center;

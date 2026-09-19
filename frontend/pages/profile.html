@@ -107,12 +107,12 @@
         document.getElementById("portfolioUrl").value = profile.portfolio_url || "";
 
         document.getElementById("skillsList").innerHTML = profile.skills.length
-          ? profile.skills.map(s => `<span class="tag">${s.name} <a href="#" data-skill-id="${s.id}" class="removeSkill" style="color:var(--danger);">&times;</a></span>`).join("")
+          ? profile.skills.map(s => `<span class="tag">${esc(s.name)} <a href="#" data-skill-id="${esc(s.id)}" class="removeSkill" style="color:var(--danger);">&times;</a></span>`).join("")
           : `<p class="text-muted">No skills added yet.</p>`;
         document.querySelectorAll(".removeSkill").forEach(el =>
           el.addEventListener("click", async (e) => {
             e.preventDefault();
-            await apiRequest(`/api/profile/skills/${e.target.dataset.skillId}`, { method: "DELETE" });
+            await apiRequest(`/api/profile/skills/${e.currentTarget.dataset.skillId}`, { method: "DELETE" });
             loadProfile();
           })
         );
@@ -120,9 +120,9 @@
         document.getElementById("experienceList").innerHTML = profile.experience.length
           ? profile.experience.map(x => `
               <div style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <strong>${x.title}</strong> at ${x.company}
+                <strong>${esc(x.title)}</strong> at ${esc(x.company)}
                 <div class="text-muted" style="font-size:0.85rem;">
-                  ${x.start_date || '?'} — ${x.end_date || 'Present'}
+                  ${esc(x.start_date || '?')} — ${esc(x.end_date || 'Present')}
                 </div>
               </div>`).join("")
           : `<p class="text-muted">No experience added yet.</p>`;
@@ -130,9 +130,9 @@
         document.getElementById("projectsList").innerHTML = profile.projects.length
           ? profile.projects.map(p => `
               <div style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <strong>${p.title}</strong>
-                ${p.url ? ` — <a href="${p.url}" target="_blank">link</a>` : ''}
-                <div class="text-muted" style="font-size:0.85rem;">${p.description || ''}</div>
+                <strong>${esc(p.title)}</strong>
+                ${p.url ? ` — <a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">link</a>` : ''}
+                <div class="text-muted" style="font-size:0.85rem;">${esc(p.description || '')}</div>
               </div>`).join("")
           : `<p class="text-muted">No projects added yet.</p>`;
 

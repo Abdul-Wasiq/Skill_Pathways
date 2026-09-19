@@ -18,18 +18,24 @@ from app.config import settings
 _pool: pool.ThreadedConnectionPool | None = None
 
 
-def init_pool(minconn: int = 1, maxconn: int = 10) -> None:
+def init_pool(minconn: int = 1, maxconn: int | None = None) -> None:
     global _pool
     if _pool is not None:
         return
     _pool = psycopg2.pool.ThreadedConnectionPool(
         minconn,
-        maxconn,
+        maxconn or settings.DATABASE_POOL_MAX,
         host=settings.DATABASE_HOST,
         port=settings.DATABASE_PORT,
         dbname=settings.DATABASE_NAME,
         user=settings.DATABASE_USER,
         password=settings.DATABASE_PASSWORD,
+        sslmode=settings.DATABASE_SSLMODE,
+        # Keep idle connections alive so Neon's proxy doesn't silently drop them.
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
     )
 
 

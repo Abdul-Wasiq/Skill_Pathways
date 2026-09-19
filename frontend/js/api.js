@@ -6,7 +6,34 @@
  * If your backend runs somewhere other than http://127.0.0.1:8000,
  * update API_BASE_URL below.
  */
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? "http://127.0.0.1:8000"
+    : "https://YOUR-BACKEND.onrender.com"; // <-- replace with your Render URL
+
+/**
+ * Escape user-generated text before putting it into innerHTML.
+ * Use esc(value) for every dynamic value in a template string.
+ */
+function esc(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Only allow http(s) links; anything else (e.g. javascript:) becomes "#". */
+function safeUrl(url) {
+  try {
+    const u = new URL(url, window.location.origin);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.href : "#";
+  } catch {
+    return "#";
+  }
+}
 
 const Auth = {
   getToken() {
@@ -52,7 +79,7 @@ async function apiRequest(path, { method = "GET", body = null, auth = true } = {
     );
   }
 
-  if (response.status === 401) {
+  if (response.status === 401 && auth) {
     // Session invalid/expired — send back to login rather than showing raw JSON.
     Auth.logout();
     throw new Error("Your session has expired. Please log in again.");
@@ -121,7 +148,7 @@ function renderNavbar(activePage) {
     [
       "connections.html",
       "Network",
-      `<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>`
+      `<svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>`
     ],
     [
       "notifications.html",
@@ -149,7 +176,7 @@ function renderNavbar(activePage) {
   }
 
   el.innerHTML = `
-    <div class="brand">Skill Pathways</div>
+    <div class="brand">CareerBridge</div>
     <nav>
       ${links
         .map(
