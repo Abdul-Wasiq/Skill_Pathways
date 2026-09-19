@@ -42,11 +42,11 @@
     Auth.requireLogin();
     renderNavbar("ai-assistant.html");
 
-    document.getElementById("askBtn").addEventListener("click", async () => {
+    document.getElementById("askBtn").addEventListener("click", (e) => withBusy(e.currentTarget, "Thinking...", async () => {
       const question = document.getElementById("careerQuestion").value.trim();
       if (!question) return;
       const el = document.getElementById("careerAnswer");
-      el.innerHTML = `<p class="text-muted">Thinking...</p>`;
+      el.innerHTML = spinnerHtml("Thinking");
       try {
         const result = await apiRequest("/api/ai/career-assistant", { method: "POST", body: { question } });
         el.innerHTML = `
@@ -60,13 +60,13 @@
         el.innerHTML = "";
         showError("errorBox", err.message);
       }
-    });
+    }));
 
-    document.getElementById("analyzeJobBtn").addEventListener("click", async () => {
+    document.getElementById("analyzeJobBtn").addEventListener("click", (e) => withBusy(e.currentTarget, "Analyzing...", async () => {
       const description = document.getElementById("jobDescription").value.trim();
       if (!description) return;
       const el = document.getElementById("jobAnalysisResult");
-      el.innerHTML = `<p class="text-muted">Analyzing...</p>`;
+      el.innerHTML = spinnerHtml("Analyzing");
       try {
         const result = await apiRequest("/api/ai/job-analyzer", { method: "POST", body: { description } });
         const a = result.analysis;
@@ -87,13 +87,13 @@
         el.innerHTML = "";
         showError("errorBox", err.message);
       }
-    });
+    }));
 
-    document.getElementById("uploadResumeBtn").addEventListener("click", async () => {
+    document.getElementById("uploadResumeBtn").addEventListener("click", (ev) => withBusy(ev.currentTarget, "Reading resume...", async () => {
       const fileInput = document.getElementById("resumeFile");
       if (!fileInput.files.length) { showError("errorBox", "Choose a file first."); return; }
       const el = document.getElementById("resumePreview");
-      el.innerHTML = `<p class="text-muted">Extracting and analyzing your resume...</p>`;
+      el.innerHTML = spinnerHtml("Reading your resume. This can take up to a minute");
 
       const formData = new FormData();
       formData.append("file", fileInput.files[0]);
@@ -117,9 +117,10 @@
           <button id="confirmResumeBtn">Confirm &amp; Save to Profile</button>
         `;
 
-        document.getElementById("confirmResumeBtn").addEventListener("click", async () => {
+        document.getElementById("confirmResumeBtn").addEventListener("click", (ev) => withBusy(ev.currentTarget, "Saving to profile...", async () => {
           try {
             await apiRequest("/api/ai/resume-to-profile/confirm", {
+              timeoutMs: 120000,
               method: "POST",
               body: {
                 headline: document.getElementById("rHeadline").value,
@@ -131,17 +132,17 @@
                 certifications: data.certifications,
               },
             });
-            showSuccess("successBox", "Profile updated from resume!");
+            showSuccess("successBox", "Profile updated from resume.");
             el.innerHTML = "";
           } catch (err) {
             showError("errorBox", err.message);
           }
-        });
+        }));
       } catch (err) {
         el.innerHTML = "";
         showError("errorBox", err.message);
       }
-    });
+    }));
   </script>
 </body>
 </html>

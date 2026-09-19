@@ -11,7 +11,7 @@
   <div class="container">
     <div id="errorBox" class="error-msg"></div>
     <div id="successBox" class="success-msg"></div>
-    <div id="content">Loading...</div>
+    <div id="content"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
   </div>
 
   <script src="../js/api.js"></script>
@@ -69,27 +69,32 @@
       }
     }
 
-    async function applyToOpportunity() {
-      try {
-        await apiRequest(`/api/opportunities/${opportunityId}/apply`, { method: "POST" });
-        showSuccess("successBox", "Application submitted!");
-      } catch (err) {
-        showError("errorBox", err.message);
-      }
+    function applyToOpportunity(e) {
+      return withBusy(e.currentTarget, "Applying...", async () => {
+        try {
+          await apiRequest(`/api/opportunities/${opportunityId}/apply`, { method: "POST" });
+          showSuccess("successBox", "Application submitted.");
+        } catch (err) {
+          showError("errorBox", err.message);
+        }
+      });
     }
 
-    async function saveOpportunity() {
-      try {
-        await apiRequest(`/api/opportunities/${opportunityId}/save`, { method: "POST" });
-        showSuccess("successBox", "Opportunity saved.");
-      } catch (err) {
-        showError("errorBox", err.message);
-      }
+    function saveOpportunity(e) {
+      return withBusy(e.currentTarget, "Saving...", async () => {
+        try {
+          await apiRequest(`/api/opportunities/${opportunityId}/save`, { method: "POST" });
+          showSuccess("successBox", "Opportunity saved.");
+        } catch (err) {
+          showError("errorBox", err.message);
+        }
+      });
     }
 
-    async function runAiMatch() {
+    function runAiMatch(e) {
+      return withBusy(e.currentTarget, "Analyzing...", async () => {
       const resultEl = document.getElementById("aiResult");
-      resultEl.innerHTML = `<p class="text-muted">Analyzing your profile against this opportunity...</p>`;
+      resultEl.innerHTML = spinnerHtml("Comparing your profile with this opportunity");
       try {
         const analysis = await apiRequest(`/api/ai/opportunity-match/${opportunityId}`, { method: "POST" });
         const matched = (analysis.matched_skills || []).map(s => `<span class="tag matched">✓ ${esc(s)}</span>`).join("");
@@ -108,9 +113,10 @@
           ${analysis.eligibility_notes ? `<p class="text-muted"><strong>Eligibility:</strong> ${esc(analysis.eligibility_notes)}</p>` : ''}
         `;
       } catch (err) {
-        resultEl.innerHTML = `<p class="text-muted">Could not complete analysis.</p>`;
+        resultEl.innerHTML = `<p class="text-muted">Could not complete the analysis. Try again.</p>`;
         showError("errorBox", err.message);
       }
+      });
     }
 
     loadOpportunity();

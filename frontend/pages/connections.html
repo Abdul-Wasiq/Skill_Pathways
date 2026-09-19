@@ -14,12 +14,12 @@
 
     <div class="card">
       <h3 class="mt-0">Pending Requests</h3>
-      <div id="pendingList" class="text-muted">Loading...</div>
+      <div id="pendingList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <h3 class="mt-0">Your Connections</h3>
-      <div id="connectionsList" class="text-muted">Loading...</div>
+      <div id="connectionsList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
   </div>
 
@@ -31,7 +31,10 @@
     async function loadConnections() {
       hideError("errorBox");
       try {
-        const pending = await apiRequest("/api/connections/pending");
+        const [pending, connections] = await Promise.all([
+          apiRequest("/api/connections/pending"),
+          apiRequest("/api/connections"),
+        ]);
         document.getElementById("pendingList").innerHTML = pending.length
           ? pending.map(p => `
               <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
@@ -44,7 +47,6 @@
             `).join("")
           : `<p class="text-muted">No pending requests.</p>`;
 
-        const connections = await apiRequest("/api/connections");
         document.getElementById("connectionsList").innerHTML = connections.length
           ? connections.map(c => `
               <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">

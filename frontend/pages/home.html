@@ -21,14 +21,14 @@
         <h3 class="mt-0">Latest Opportunities</h3>
         <a href="opportunities.html">View all &rarr;</a>
       </div>
-      <div id="opportunitiesList" class="text-muted">Loading...</div>
+      <div id="opportunitiesList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <div class="flex-between">
         <h3 class="mt-0">Your Applications</h3>
       </div>
-      <div id="applicationsList" class="text-muted">Loading...</div>
+      <div id="applicationsList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
   </div>
 
@@ -42,8 +42,15 @@
       document.getElementById("welcomeMsg").textContent = `Welcome back, ${user.name}`;
 
       try {
-        if (user.role === "student" || user.role === "professional") {
-          const profile = await apiRequest("/api/profile");
+        const isCandidate = user.role === "student" || user.role === "professional";
+        // Fire all requests at once instead of waiting for each in turn.
+        const [profile, opportunities, applications] = await Promise.all([
+          isCandidate ? apiRequest("/api/profile") : Promise.resolve(null),
+          apiRequest("/api/opportunities?limit=5"),
+          isCandidate ? apiRequest("/api/applications") : Promise.resolve(null),
+        ]);
+
+        if (isCandidate) {
           document.getElementById("completionSection").innerHTML = `
             <p class="text-muted" style="margin-bottom:2px;">Profile Completion: ${profile.profile_completion}%</p>
             <div class="completion-bar"><div style="width:${profile.profile_completion}%"></div></div>
@@ -54,13 +61,11 @@
             `<p class="text-muted">Organization account — manage your postings from the Opportunities page.</p>`;
         }
 
-        const opportunities = await apiRequest("/api/opportunities?limit=5");
         document.getElementById("opportunitiesList").innerHTML = opportunities.length
           ? opportunities.map(opportunityCardHtml).join("")
           : `<p class="text-muted">No opportunities posted yet.</p>`;
 
-        if (user.role === "student" || user.role === "professional") {
-          const applications = await apiRequest("/api/applications");
+        if (isCandidate) {
           document.getElementById("applicationsList").innerHTML = applications.length
             ? applications.map(a => `
                 <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">

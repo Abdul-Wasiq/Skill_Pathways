@@ -141,8 +141,7 @@
       }
     }
 
-    document.getElementById("profileForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+    document.getElementById("profileForm").addEventListener("submit", (e) => { e.preventDefault(); return withBusy(e.submitter || e.target.querySelector("button[type=submit]"), "Saving...", async () => {
       try {
         await apiRequest("/api/profile", {
           method: "PUT",
@@ -159,12 +158,12 @@
             portfolio_url: document.getElementById("portfolioUrl").value || null,
           },
         });
-        showSuccess("successBox", "Profile updated.");
+        showSuccess("successBox", "Profile saved.");
         loadProfile();
       } catch (err) {
         showError("errorBox", err.message);
       }
-    });
+    }); });
 
     document.getElementById("skillForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -179,8 +178,7 @@
       }
     });
 
-    document.getElementById("experienceForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+    document.getElementById("experienceForm").addEventListener("submit", (e) => { e.preventDefault(); return withBusy(e.submitter || e.target.querySelector("button[type=submit]"), "Adding...", async () => {
       try {
         await apiRequest("/api/profile/experience", {
           method: "POST",
@@ -199,10 +197,9 @@
       } catch (err) {
         showError("errorBox", err.message);
       }
-    });
+    }); });
 
-    document.getElementById("projectForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
+    document.getElementById("projectForm").addEventListener("submit", (e) => { e.preventDefault(); return withBusy(e.submitter || e.target.querySelector("button[type=submit]"), "Adding...", async () => {
       try {
         await apiRequest("/api/profile/projects", {
           method: "POST",
@@ -218,7 +215,7 @@
       } catch (err) {
         showError("errorBox", err.message);
       }
-    });
+    }); });
 
     loadProfile();
   </script>

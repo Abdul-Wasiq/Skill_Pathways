@@ -9,7 +9,7 @@
 const API_BASE_URL =
   location.hostname === "localhost" || location.hostname === "127.0.0.1"
     ? "http://127.0.0.1:8000"
-    : "https://months-maryland-fixtures-cornell.trycloudflare.com";
+    : "https://costume-under-realtors-guys.trycloudflare.com"; // <-- update this line when the tunnel URL changes
 
 /**
  * Escape user-generated text before putting it into innerHTML.
@@ -59,12 +59,18 @@ const Auth = {
   },
 };
 
-async function apiRequest(path, { method = "GET", body = null, auth = true } = {}) {
+async function apiRequest(path, { method = "GET", body = null, auth = true, timeoutMs = 60000 } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = Auth.getToken();
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
+
+  // Abort a request that hangs for too long instead of spinning forever.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  // If the server is slow, tell the person it is still working.
+  const slowId = setTimeout(() => Toast.info("Still working. The server is a bit slow right now."), 6000);
 
   let response;
   try {
@@ -72,11 +78,16 @@ async function apiRequest(path, { method = "GET", body = null, auth = true } = {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
     });
   } catch (err) {
-    throw new Error(
-      "Unable to reach the server. Is the backend running at " + API_BASE_URL + "?"
-    );
+    if (err.name === "AbortError") {
+      throw new Error("The server took too long to respond. Please try again in a moment.");
+    }
+    throw new Error("Could not reach the server. Check your connection and try again.");
+  } finally {
+    clearTimeout(timeoutId);
+    clearTimeout(slowId);
   }
 
   if (response.status === 401 && auth) {
@@ -103,25 +114,87 @@ async function apiRequest(path, { method = "GET", body = null, auth = true } = {
   return data;
 }
 
+/* ---------------------------------------------------------------
+ * Toast notifications: appear at the bottom of the screen, wherever
+ * the person is scrolled, and fade out on their own.
+ * ------------------------------------------------------------- */
+const Toast = {
+  _container() {
+    let c = document.getElementById("toastContainer");
+    if (!c) {
+      c = document.createElement("div");
+      c.id = "toastContainer";
+      c.setAttribute("aria-live", "polite");
+      document.body.appendChild(c);
+    }
+    return c;
+  },
+  show(message, kind = "info", ms = 4000) {
+    const container = this._container();
+    // Replace an identical toast instead of stacking duplicates.
+    for (const el of container.children) {
+      if (el.dataset.msg === message) el.remove();
+    }
+    const el = document.createElement("div");
+    el.className = `toast toast-${kind}`;
+    el.dataset.msg = message;
+    el.setAttribute("role", kind === "error" ? "alert" : "status");
+    const text = document.createElement("span");
+    text.textContent = message;               // textContent: safe from HTML injection
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "toast-close";
+    close.setAttribute("aria-label", "Dismiss");
+    close.textContent = "\u00d7";
+    close.addEventListener("click", () => el.remove());
+    el.append(text, close);
+    container.appendChild(el);
+    if (ms > 0) setTimeout(() => el.remove(), ms);
+  },
+  success(m) { this.show(m, "success", 3500); },
+  error(m) { this.show(m, "error", 6000); },
+  info(m) { this.show(m, "info", 4000); },
+};
+
+/* ---------------------------------------------------------------
+ * Spinner markup for "Loading..." placeholders.
+ * ------------------------------------------------------------- */
+function spinnerHtml(label = "Loading") {
+  return `<div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>${esc(label)}</span></div>`;
+}
+
+/* ---------------------------------------------------------------
+ * Run an async action while locking a button, so one click = one
+ * request. Shows a spinner in the button and restores it afterwards.
+ * ------------------------------------------------------------- */
+async function withBusy(button, busyLabel, action) {
+  if (!button || button.disabled) return;
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.classList.add("is-busy");
+  button.innerHTML = `<span class="spinner spinner-sm" aria-hidden="true"></span><span>${esc(busyLabel)}</span>`;
+  try {
+    return await action();
+  } finally {
+    button.disabled = false;
+    button.classList.remove("is-busy");
+    button.innerHTML = original;
+  }
+}
+
+/* Keep the old inline error/success boxes working, but surface the message
+ * as a toast the person can actually see. */
 function showError(elementId, message) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.textContent = message;
-  el.classList.add("show");
+  Toast.error(message);
 }
 
 function hideError(elementId) {
   const el = document.getElementById(elementId);
-  if (!el) return;
-  el.classList.remove("show");
+  if (el) el.classList.remove("show");
 }
 
 function showSuccess(elementId, message) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-  el.textContent = message;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 4000);
+  Toast.success(message);
 }
 
 function renderNavbar(activePage) {

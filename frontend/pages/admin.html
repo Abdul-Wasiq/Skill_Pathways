@@ -14,22 +14,22 @@
 
     <div class="card">
       <h3 class="mt-0">Platform Statistics</h3>
-      <div id="statsGrid" class="grid cols-2 text-muted">Loading...</div>
+      <div id="statsGrid" class="grid cols-2 text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <h3 class="mt-0">Users</h3>
-      <div id="usersList" class="text-muted">Loading...</div>
+      <div id="usersList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <h3 class="mt-0">Organizations</h3>
-      <div id="orgsList" class="text-muted">Loading...</div>
+      <div id="orgsList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <h3 class="mt-0">Reports</h3>
-      <div id="reportsList" class="text-muted">Loading...</div>
+      <div id="reportsList" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
   </div>
 
@@ -46,7 +46,12 @@
     async function loadAdmin() {
       hideError("errorBox");
       try {
-        const stats = await apiRequest("/api/admin/stats");
+        const [stats, users, orgs, reports] = await Promise.all([
+          apiRequest("/api/admin/stats"),
+          apiRequest("/api/admin/users"),
+          apiRequest("/api/admin/organizations"),
+          apiRequest("/api/admin/reports"),
+        ]);
         document.getElementById("statsGrid").innerHTML = Object.entries(stats).map(([key, val]) => `
           <div class="card" style="margin-bottom:0;">
             <div style="font-size:1.6rem; font-weight:700; color:var(--text);">${esc(val)}</div>
@@ -54,7 +59,6 @@
           </div>
         `).join("");
 
-        const users = await apiRequest("/api/admin/users");
         document.getElementById("usersList").innerHTML = users.map(u => `
           <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div>
@@ -83,7 +87,6 @@
           })
         );
 
-        const orgs = await apiRequest("/api/admin/organizations");
         document.getElementById("orgsList").innerHTML = orgs.length ? orgs.map(o => `
           <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div><strong>${esc(o.name)}</strong> <span class="text-muted">${esc(o.industry || '')}</span></div>
@@ -100,7 +103,6 @@
           })
         );
 
-        const reports = await apiRequest("/api/admin/reports");
         document.getElementById("reportsList").innerHTML = reports.length ? reports.map(r => `
           <div style="padding:8px 0; border-bottom:1px solid var(--border);">
             <div class="flex-between">

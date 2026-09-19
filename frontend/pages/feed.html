@@ -31,12 +31,12 @@
 
     <div class="card">
       <h3 class="mt-0">Recommended For You</h3>
-      <div id="recommendedOpportunities" class="text-muted">Loading...</div>
+      <div id="recommendedOpportunities" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
 
     <div class="card">
       <h3 class="mt-0">Your Feed</h3>
-      <div id="postsFeed" class="text-muted">Loading...</div>
+      <div id="postsFeed" class="text-muted"><div class="loading-row" role="status"><span class="spinner" aria-hidden="true"></span><span>Loading</span></div></div>
     </div>
   </div>
 
@@ -46,12 +46,9 @@
     renderNavbar("feed.html");
     const user = Auth.getUser();
 
-    document.getElementById("aiHelpBtn").addEventListener("click", async () => {
+    document.getElementById("aiHelpBtn").addEventListener("click", (e) => withBusy(e.currentTarget, "Improving...", async () => {
       const content = document.getElementById("postContent").value.trim();
       if (!content) { showError("errorBox", "Write a draft first."); return; }
-      const btn = document.getElementById("aiHelpBtn");
-      btn.disabled = true;
-      btn.textContent = "Improving...";
       try {
         const result = await apiRequest("/api/ai/post-assistant", {
           method: "POST",
@@ -63,13 +60,10 @@
         }
       } catch (err) {
         showError("errorBox", err.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "✨ AI: Improve Writing";
       }
-    });
+    }));
 
-    document.getElementById("publishBtn").addEventListener("click", async () => {
+    document.getElementById("publishBtn").addEventListener("click", (e) => withBusy(e.currentTarget, "Publishing...", async () => {
       const content = document.getElementById("postContent").value.trim();
       if (!content) { showError("errorBox", "Post content cannot be empty."); return; }
       try {
@@ -78,12 +72,12 @@
           body: { content, post_type: document.getElementById("postType").value },
         });
         document.getElementById("postContent").value = "";
-        showSuccess("successBox", "Post published!");
+        showSuccess("successBox", "Published.");
         loadFeed();
       } catch (err) {
         showError("errorBox", err.message);
       }
-    });
+    }));
 
     function postCardHtml(p) {
       return `
@@ -125,11 +119,14 @@
         document.querySelectorAll(".likeBtn").forEach(el => {
           el.addEventListener("click", async (e) => {
             e.preventDefault();
+            if (el.dataset.busy) return;
+            el.dataset.busy = "1";
             try {
               await apiRequest(`/api/posts/${e.currentTarget.dataset.id}/like`, { method: "POST" });
               loadFeed();
             } catch (err) {
               showError("errorBox", err.message);
+              delete el.dataset.busy;   // let the person try again after a failure
             }
           });
         });

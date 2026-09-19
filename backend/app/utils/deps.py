@@ -11,8 +11,13 @@ from app.utils.security import decode_access_token
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
+# NOTE: these dependencies are deliberately plain `def`, not `async def`.
+# They call synchronous psycopg2 code; inside an `async def` that would block
+# the whole event loop (every other request waits). As plain functions FastAPI
+# runs them in a worker thread, so slow database calls no longer freeze the server.
 
-async def get_current_user(
+
+def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
 ) -> dict:
     if credentials is None:
@@ -46,7 +51,7 @@ async def get_current_user(
 def require_roles(*allowed_roles: str):
     """Dependency factory: raises 403 unless current_user's role is in allowed_roles."""
 
-    async def _checker(current_user: dict = Depends(get_current_user)) -> dict:
+    def _checker(current_user: dict = Depends(get_current_user)) -> dict:
         if current_user["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
